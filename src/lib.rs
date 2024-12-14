@@ -2,6 +2,7 @@ use regex::Regex;
 use std::fs::read_to_string;
 use std::ops::Div;
 use std::str::FromStr;
+use itertools::Itertools;
 
 pub fn count_safety_factor(input_path: &str) -> usize {
     let mut map = Map::new(extract_robots(input_path));
@@ -10,6 +11,11 @@ pub fn count_safety_factor(input_path: &str) -> usize {
     }
 
     map.count_safety_factors()
+}
+
+pub fn count_x_mas_tree_regroup_seconds(input_path: &str) -> usize {
+    let mut map = Map::new(extract_robots(input_path));
+    map.seconds_to_regroup_as_x_mas_tree()
 }
 
 fn extract_robots(input_path: &str) -> Vec<Robot> {
@@ -113,6 +119,62 @@ impl Map {
         Point { x, y }
     }
 }
+
+impl Map {
+    fn seconds_to_regroup_as_x_mas_tree(&mut self) -> usize {
+        loop {
+            // Update the state of the map
+            self.wait();
+
+            //self.pretty_print();
+
+            let diff: usize = self.robots
+                .iter()
+                .combinations(2)
+                .map(|robot| {
+                    ((robot[0].position.x - robot[1].position.x).abs()
+                        + (robot[0].position.y - robot[1].position.y).abs()) as usize
+                })
+                .sum::<usize>()
+                / self.robots.len();
+
+            if diff <= 10_000 {
+                self.pretty_print();
+                return self.seconds_elapsed;
+            }
+        }
+    }
+
+    fn pretty_print(&self) {
+        let (min_x, max_x, min_y, max_y) = self.get_robot_bounds();
+        for y in min_y..=max_y {
+            for x in min_x..=max_x {
+                if self.robots.iter().any(|robot| robot.position.x == x && robot.position.y == y) {
+                    print!("#");
+                } else {
+                    print!(".");
+                }
+            }
+            println!();
+        }
+    }
+
+    fn get_robot_bounds(&self) -> (isize, isize, isize, isize) {
+        let min_x = self.robots.iter().map(|robot| robot.position.x).min().unwrap();
+        let max_x = self.robots.iter().map(|robot| robot.position.x).max().unwrap();
+        let min_y = self.robots.iter().map(|robot| robot.position.y).min().unwrap();
+        let max_y = self.robots.iter().map(|robot| robot.position.y).max().unwrap();
+        (min_x, max_x, min_y, max_y)
+    }
+
+    fn are_robots_within_bounds(&self, min_x: isize, max_x: isize, min_y: isize, max_y: isize) -> bool {
+        self.robots.iter().all(|robot| {
+            robot.position.x >= min_x && robot.position.x <= max_x &&
+                robot.position.y >= min_y && robot.position.y <= max_y
+        })
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
